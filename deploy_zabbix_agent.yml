@@ -1,5 +1,5 @@
 ---
-- name: Deploy Zabbix Agent 2 (multi-platform)
+- name: Deploy Zabbix Agent 2 (multi-platform, dynamic repo URLs)
   hosts: all
   become: yes
   vars:
@@ -9,24 +9,38 @@
     zabbix_agent_conf: "/etc/zabbix/zabbix_agent2.conf"
 
   tasks:
-    # Debian/Ubuntu repo setup
+    # Debian family (Debian + Ubuntu)
+    - name: Set Zabbix repo URL for Debian/Ubuntu
+      set_fact:
+        zabbix_repo_url: >-
+          {% if ansible_distribution == "Debian" and ansible_distribution_major_version == "13" %}
+          https://repo.zabbix.com/zabbix/{{ zabbix_version }}/release/debian/pool/main/z/zabbix-release/zabbix-release_latest_{{ zabbix_version }}+debian13_all.deb
+          {% elif ansible_distribution == "Debian" and ansible_distribution_major_version == "12" %}
+          https://repo.zabbix.com/zabbix/{{ zabbix_version }}/release/debian/pool/main/z/zabbix-release/zabbix-release_latest_{{ zabbix_version }}+debian12_all.deb
+          {% elif ansible_distribution == "Ubuntu" %}
+          https://repo.zabbix.com/zabbix/{{ zabbix_version }}/release/ubuntu/pool/main/z/zabbix-release/zabbix-release_latest_{{ zabbix_version }}+ubuntu{{ ansible_distribution_major_version }}.04_all.deb
+          {% else %}
+          ""
+          {% endif %}
+      when: ansible_os_family == "Debian"
+
     - name: Download Zabbix repo package (Debian/Ubuntu)
       get_url:
-        url: "https://repo.zabbix.com/zabbix/{{ zabbix_version }}/ubuntu/pool/main/z/zabbix-release/zabbix-release_{{ zabbix_version }}-1+ubuntu{{ ansible_distribution_major_version }}_all.deb"
+        url: "{{ zabbix_repo_url }}"
         dest: /tmp/zabbix-release.deb
         mode: '0644'
-      when: ansible_os_family == "Debian"
+      when: ansible_os_family == "Debian" and zabbix_repo_url != ""
 
     - name: Install Zabbix repo package (Debian/Ubuntu)
       apt:
         deb: /tmp/zabbix-release.deb
         state: present
-      when: ansible_os_family == "Debian"
+      when: ansible_os_family == "Debian" and zabbix_repo_url != ""
 
     - name: Update apt cache (Debian/Ubuntu)
       apt:
         update_cache: yes
-      when: ansible_os_family == "Debian"
+      when: ansible_os_family == "Debian" and zabbix_repo_url != ""
 
     # RHEL/CentOS repo setup
     - name: Install Zabbix repo on RHEL/CentOS
