@@ -1,0 +1,61 @@
+---
+- name: Deploy Zabbix Agent 2 (multi-platform)
+  hosts: all
+  become: yes
+  vars:
+    zabbix_version: "7.4"
+    zabbix_server: "192.168.1.20"   # <-- change to your Zabbix server IP/hostname
+    zabbix_hostname: "{{ inventory_hostname }}"
+    zabbix_agent_conf: "/etc/zabbix/zabbix_agent2.conf"
+
+  tasks:
+    - name: Install Zabbix repo on Debian/Ubuntu
+      apt:
+        deb: "https://repo.zabbix.com/zabbix/{{ zabbix_version }}/ubuntu/pool/main/z/zabbix-release/zabbix-release_{{ zabbix_version }}-1+ubuntu$(lsb_release -rs)_all.deb"
+        state: present
+      when: ansible_os_family == "Debian"
+      register: debian_repo
+      ignore_errors: yes
+
+    - name: Install Zabbix repo on RHEL/CentOS
+      yum:
+        name: "https://repo.zabbix.com/zabbix/{{ zabbix_version }}/rhel/{{ ansible_distribution_major_version }}/x86_64/zabbix-release-{{ zabbix_version }}-1.el{{ ansible_distribution_major_version }}.noarch.rpm"
+        state: present
+      when: ansible_os_family == "RedHat"
+      register: rhel_repo
+      ignore_errors: yes
+
+    - name: Update package cache (Debian)
+      apt:
+        update_cache: yes
+      when: ansible_os_family == "Debian" and debian_repo is succeeded
+
+    - name: Install Zabbix Agent 2
+      package:
+        name: zabbix-agent2
+        state: present
+
+    - name: Deploy Zabbix Agent 2 config
+      copy:
+        dest: "{{ zabbix_agent_conf }}"
+        content: |
+          PidFile=/var/run/zabbix/zabbix_agent2.pid
+          LogFile=/var/log/zabbix/zabbix_agent2.log
+          LogFileSize=0
+          Server={{ zabbix_server }}
+          ServerActive={{ zabbix_server }}
+          Hostname={{ zabbix_hostname }}
+          Include=/etc/zabbix/zabbix_agent2.d/*.conf
+      notify: Restart Zabbix Agent 2
+
+    - name: Ensure Zabbix Agent 2 is enabled and running
+      service:
+        name: zabbix-agent2
+        state: started
+        enabled: yes
+
+  handlers:
+    - name: Restart Zabbix Agent 2
+      service:
+        name: zabbix-agent2
+        state: restarted
