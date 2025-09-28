@@ -11,7 +11,7 @@
   tasks:
     - name: Install Zabbix repo on Debian/Ubuntu
       apt:
-        deb: "https://repo.zabbix.com/zabbix/{{ zabbix_version }}/ubuntu/pool/main/z/zabbix-release/zabbix-release_{{ zabbix_version }}-1+ubuntu$(lsb_release -rs)_all.deb"
+        deb: "https://repo.zabbix.com/zabbix/{{ zabbix_version }}/ubuntu/pool/main/z/zabbix-release/zabbix-release_{{ zabbix_version }}-1+ubuntu{{ ansible_distribution_major_version }}_all.deb"
         state: present
       when: ansible_os_family == "Debian"
       register: debian_repo
@@ -35,7 +35,7 @@
         name: zabbix-agent2
         state: present
 
-    - name: Deploy Zabbix Agent 2 config
+    - name: Deploy Zabbix Agent 2 configuration
       copy:
         dest: "{{ zabbix_agent_conf }}"
         content: |
