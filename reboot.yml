@@ -1,0 +1,14 @@
+---
+- name: Reboot servers safely
+  hosts: all
+  become: yes
+  tasks:
+    - name: Reboot the machine
+      reboot:
+        msg: "Reboot initiated by Ansible via Semaphore"
+        connect_timeout: 5       # seconds to wait for SSH connection
+        reboot_timeout: 600      # total time to wait for reboot (10 min)
+        pre_reboot_delay: 0      # wait before reboot
+        post_reboot_delay: 30    # wait after reboot before checking SSH
+        test_command: whoami     # simple check to confirm system is back
+      tags: [reboot]
