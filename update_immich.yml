@@ -1,0 +1,42 @@
+---
+- name: Update Immich Docker Compose deployment
+  hosts: immich_server
+  become: true
+  vars:
+    immich_dir: /home/afif/immich-app
+    immich_env_file: "{{ immich_dir }}/.env"
+    immich_version: "{{ lookup('env', 'IMMICH_VERSION') | default('release', true) }}"
+    prune_old_images: true
+
+  tasks:
+    - name: Show current Immich version (from env file)
+      ansible.builtin.shell: "grep '^IMMICH_VERSION=' {{ immich_env_file }} | cut -d '=' -f2"
+      register: current_version
+      changed_when: false
+
+    - name: Print detected version
+      ansible.builtin.debug:
+        msg: "Current IMMICH_VERSION is {{ current_version.stdout | default('not set') }}"
+
+    - name: Update IMMICH_VERSION in .env if different
+      ansible.builtin.lineinfile:
+        path: "{{ immich_env_file }}"
+        regexp: '^IMMICH_VERSION='
+        line: "IMMICH_VERSION={{ immich_version }}"
+      notify: Restart Immich stack
+
+    - name: Pull latest Immich images
+      ansible.builtin.shell: docker compose pull
+      args:
+        chdir: "{{ immich_dir }}"
+      notify: Restart Immich stack
+
+    - name: Optionally prune old images
+      ansible.builtin.shell: docker image prune -f
+      when: prune_old_images
+
+  handlers:
+    - name: Restart Immich stack
+      ansible.builtin.shell: docker compose up -d
+      args:
+        chdir: "{{ immich_dir }}"
