@@ -1,0 +1,20 @@
+---
+- name: System update and upgrade
+  hosts: all
+  become: yes
+  vars:
+    apt_upgrade_type: "full"   # can be: yes, safe, full, dist
+    apt_cache_valid_time: 3600 # seconds
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: "{{ apt_cache_valid_time }}"
+      tags: [update]
+
+    - name: Upgrade all packages
+      apt:
+        upgrade: "{{ apt_upgrade_type }}"
+        autoremove: yes
+        autoclean: yes
+      tags: [upgrade]
