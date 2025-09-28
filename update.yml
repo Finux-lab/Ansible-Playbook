@@ -1,10 +1,10 @@
 ---
-- name: System update and upgrade
+- name: System update and upgrade (keep existing Zabbix configs)
   hosts: all
   become: yes
   vars:
-    apt_upgrade_type: "full"   # can be: yes, safe, full, dist
-    apt_cache_valid_time: 3600 # seconds
+    apt_upgrade_type: "full"
+    apt_cache_valid_time: 3600
   tasks:
     - name: Update apt cache
       apt:
@@ -12,9 +12,10 @@
         cache_valid_time: "{{ apt_cache_valid_time }}"
       tags: [update]
 
-    - name: Upgrade all packages
+    - name: Upgrade all packages but keep existing configs (e.g. Zabbix)
       apt:
         upgrade: "{{ apt_upgrade_type }}"
         autoremove: yes
         autoclean: yes
+        dpkg_options: "force-confold,force-confdef"
       tags: [upgrade]
