@@ -1,0 +1,24 @@
+---
+- name: Update Pi-hole Docker Compose deployment
+  hosts: all
+  become: true
+  vars:
+    pihole_dir: /home/afif/pihole
+    prune_old_images: true
+
+  tasks:
+    - name: Pull latest Pi-hole image
+      ansible.builtin.shell: docker compose pull
+      args:
+        chdir: "{{ pihole_dir }}"
+      notify: Restart Pi-hole stack
+
+    - name: Optionally prune old images
+      ansible.builtin.shell: docker image prune -f
+      when: prune_old_images
+
+  handlers:
+    - name: Restart Pi-hole stack
+      ansible.builtin.shell: docker compose up -d
+      args:
+        chdir: "{{ pihole_dir }}"
