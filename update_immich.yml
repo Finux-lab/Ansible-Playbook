@@ -1,6 +1,6 @@
 ---
 - name: Update Immich Docker Compose deployment
-  hosts: Docker-raspi
+  hosts: All
   become: true
   vars:
     immich_dir: /home/afif/immich-app
